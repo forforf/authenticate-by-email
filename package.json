@@ -6,11 +6,13 @@
   "main":"tbd",
   "repository": {
     "type": "git",
-    "url": "https://gighub.com/forforf/authenticate-by-email",
+    "url": "https://gighub.com/forforf/authenticate-by-email"
   },
-  "dependencies": {},
+  "dependencies": {
+    "q":"0.9.x"
+  },
   "devDependencies": {
-    "mocha": "1.13.x",
+    "mocha": "1.13.x"
   },
   "bundledDependencies": {},
   "license":"MIT",
