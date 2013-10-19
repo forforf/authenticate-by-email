@@ -3,7 +3,7 @@
   "name": "authenticate-by-email",
   "description":"A drop in component for generating security credentials",
   "version":"0.0.1",
-  "main":"tbd",
+  "main":"./lib/auth.js",
   "repository": {
     "type": "git",
     "url": "https://gighub.com/forforf/authenticate-by-email"
@@ -12,7 +12,8 @@
     "q":"0.9.x"
   },
   "devDependencies": {
-    "mocha": "1.13.x"
+    "mocha": "*",
+    "chai": "*"
   },
   "bundledDependencies": {},
   "license":"MIT",
