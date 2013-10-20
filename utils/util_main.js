@@ -2,5 +2,5 @@
 // for example if only a couple methods of underscore were needed, the methods could be included
 // here rather than requiring the whole underscore package
 
-module.exports = require('./forforf-extend.js').forforf;
+module.exports = require('./forforf-extend-clone.js').forforf;
 

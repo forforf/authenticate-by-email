@@ -9,7 +9,8 @@
     "url": "https://gighub.com/forforf/authenticate-by-email"
   },
   "dependencies": {
-    "q":"0.9.x"
+    "q":"0.9.x",
+    "extend": "*"
   },
   "devDependencies": {
     "mocha": "*",
