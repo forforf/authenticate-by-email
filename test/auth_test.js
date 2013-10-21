@@ -12,6 +12,21 @@ describe('auth', function(){
   var config;
   var configValidationFail;
 
+  var modelStub = function(){
+    var _modelData = {};
+    return {
+      save: function(key, values){
+        _modelData[key] = values;
+      },
+      get:  function(key){
+        return _modelData[key];
+      },
+      all: function(){
+        return _modelData;
+      }
+    };
+  }();
+
   beforeEach(function(){
     config = {
       validator: function(email) { return email }
@@ -51,9 +66,7 @@ describe('auth', function(){
       opts1 = {
         challenge: "who goes there?",
         response: "tis me.",
-        listener: function(err, status) {
-          console.log('Listener received status update:', status)
-        }
+        listener: {}
       };
 
       req1 = {
@@ -179,6 +192,37 @@ describe('auth', function(){
 
     describe('callback', function() {
       it('provides callback (Change to emitter?????)');
+    });
+
+    describe('model', function() {
+
+      describe('saving', function(){
+        var validEmail;
+        var mConfig;
+        var authResp;
+
+        beforeEach(function(){
+          validEmail = 'email_to_persist'
+          mConfig = {
+            validator: function(email) {
+              return email
+            },
+            model: modelStub
+          };
+
+          //create the request
+          authResp = auth(mConfig).request(validEmail, req1)
+        });
+
+        it('does not error when requesting', function(){
+          expect( authResp ).to.not.be.instanceof(Error);
+        });
+
+        it('saves email to the model', function(){
+          var record = mConfig.model.get(validEmail);
+          expect( record.email ).to.eql(validEmail);
+        });
+      });
     });
 
 //    var res1 = a1.config.validator('dummy');
