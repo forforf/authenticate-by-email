@@ -6,8 +6,8 @@ var clone = function(obj) {
   return Array.isArray(obj) ? obj.slice() : extend({}, obj);
 };
 
-//just a namespace to prevent clobbering any existing exports names
-module.exports.forforf = exports.forforf || {};
+var forforf = {}
+forforf.extend = extend;
+forforf.clone = clone;
 
-module.exports.forforf.extend = extend;
-module.exports.forforf.clone = clone;
+module.exports.forforf = forforf;
