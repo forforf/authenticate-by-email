@@ -222,6 +222,25 @@ describe('auth', function(){
           var record = mConfig.model.get(validEmail);
           expect( record.email ).to.eql(validEmail);
         });
+
+        it('saves challenge/response to the model', function(){
+          var record = mConfig.model.get(validEmail);
+          expect( record.challenge ).to.eql(req1.challenge);
+          expect( record.response ).to.eql(req1.response);
+        });
+
+        it('saves a randomStr to the model', function(){
+          var record = mConfig.model.get(validEmail);
+          expect( typeof record.randomStr ).to.equal('string');
+          expect( record.randomStr.length).to.equal(64);
+        });
+
+        it('saves a staleVerification to the model', function(){
+          var record = mConfig.model.get(validEmail);
+          console.dir(record);
+          expect( record.staleVerification).to.be.within(0, Infinity);
+        });
+
       });
     });
 
