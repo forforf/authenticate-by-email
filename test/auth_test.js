@@ -42,16 +42,24 @@ describe('auth', function(){
   });
 
   describe('.request', function(){
-    var req1;
+    var req1, opts1;
 
     beforeEach(function(){
-      req1 = {
-        email: 'email1',
-        challenge: 'Who are you?',
-        response: 'I am me',
-        callback: function(err, reqResp){
-          return [err, reqResp]
+      var email1 = "email1";
+
+      opts1 = {
+        challenge: "who goes there?",
+        response: "tis me.",
+        listener: function(err, status) {
+          console.log('Listener received status update:', status)
         }
+      };
+
+      req1 = {
+        email: email1,
+        challenge: opts1.challenge,
+        response: opts1.response,
+        listener: opts1.listener
       }
     });
 
@@ -61,9 +69,21 @@ describe('auth', function(){
 
     it('returns error if email is not a string', function(){
       var email = 32;
-      console.dir(auth().request(email));
       expect( auth().request(email) ).to.be.instanceof(Error)
         .and.have.property('message', 'Invalid email, not a string');
+    });
+
+    it('returns error to reqReceived callback if email is not a string', function(){
+      var email = 32;
+      var errorMessage = 'Invalid email, not a string';
+
+      req1.listener.reqReceived = function(err, status) {
+        expect(err).to.eql({typeError: errorMessage});
+      };
+
+      expect( auth().request(email, req1) ).to.be.instanceof(Error)
+        .and.have.property('message', 'Invalid email, not a string');
+
     });
 
     describe('received', function(){
