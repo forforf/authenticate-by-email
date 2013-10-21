@@ -73,20 +73,33 @@ describe('auth', function(){
         .and.have.property('message', 'Invalid email, not a string');
     });
 
-    it('returns error to reqReceived callback if email is not a string', function(){
-      var email = 32;
-      var errorMessage = 'Invalid email, not a string';
 
-      req1.listener.reqReceived = function(err, status) {
-        expect(err).to.eql({typeError: errorMessage});
-      };
 
-      expect( auth().request(email, req1) ).to.be.instanceof(Error)
-        .and.have.property('message', 'Invalid email, not a string');
+    describe('reqReceived', function(){
 
-    });
+      it('returns email to  callback if request is valid', function(){
+        var email = 'my_email';
 
-    describe('received', function(){
+        req1.listener.reqReceived = function(err, status) {
+          expect(status).to.eql(email);
+        };
+
+        expect( auth().request(email, req1) ).to.not.be.instanceof(Error)
+      });
+
+      it('returns error to callback if email is not a string', function(){
+        var email = 32;
+        var errorMessage = 'Invalid email, not a string';
+
+        req1.listener.reqReceived = function(err, status) {
+          expect(err).to.eql({typeError: errorMessage});
+        };
+
+        expect( auth().request(email, req1) ).to.be.instanceof(Error)
+          .and.have.property('message', 'Invalid email, not a string');
+
+      });
+
 
     });
 
