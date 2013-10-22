@@ -36,6 +36,22 @@ describe('auth', function(){
     };
   }();
 
+  var modelStubAsync = function(){
+    var _modelData = {};
+    return {
+      save: function(key, values, cb){
+        _modelData[key] = values;
+        cb(null, key);
+      },
+      get:  function(key, cb){
+        cb(null, _modelData[key]);
+      },
+      all: function(cb){
+        cb(null, _modelData);
+      }
+    };
+  }();
+
   beforeEach(function(){
     config = {
       validator: function(email) { return email }
@@ -339,6 +355,82 @@ describe('auth', function(){
           });
         });
       });
+
+      //convert to async model for testing
+      describe('async', function(){
+        describe('saving', function(){
+          var validEmail;
+          var mConfig;
+          var authResp;
+
+          beforeEach(function(){
+            validEmail = 'email_to_persist'
+            mConfig = {
+              validator: function(email) {
+                return email
+              },
+              model: modelStubAsync
+            };
+
+            //create the request
+            auth(mConfig).request(validEmail, req1);
+          });
+
+          it('does not error when requesting', function(){
+            expect( authResp ).to.not.be.instanceof(Error);
+          });
+
+          it('saves email to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect(err).to.equal(null);
+              expect(record.email).to.equal(validEmail);
+            });
+          });
+
+          it('saves challenge/response to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( record.challenge ).to.eql(req1.challenge);
+              expect( record.response ).to.eql(req1.response);
+            });
+          });
+
+          it('saves a randomStr to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( typeof record.randomStr ).to.equal('string');
+              expect( record.randomStr.length).to.equal(64);
+            });
+          });
+
+          it('saves a staleVerification to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( record.staleVerification).to.be.within(0, Infinity);
+            });
+          });
+
+          it('returns email to reqSaved callback when record saved', function(){
+            var email = 'saved_email';
+            var spy = false;
+            var statusChecked = q.defer();
+            var statusPromise = statusChecked.promise;
+
+            req1.listener.reqSaved = function(err, status) {
+              console.log('reqSaved called', err, status);
+              statusChecked.resolve([err, status]);
+              done();
+            };
+
+            console.log(req1.listener.reqSaved.toString());
+            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
+
+            return q.all([
+              expect(statusPromise).to.eventually.be.an('Array'),
+              expect(statusPromise.get(0)).to.eventually.eql(null),
+              expect(statusPromise.get(1)).to.eventually.eql(email)
+            ]);
+          });
+        });
+      });
+
     });
   });
 });
