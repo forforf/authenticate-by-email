@@ -1,4 +1,9 @@
 var q = require('q');
+require('mocha-as-promised')();
+
+var chai=require('chai');
+var chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
 
 
 function libPath(libFilePath){
@@ -15,11 +20,12 @@ describe('auth', function(){
   var config;
   var configValidationFail;
 
-  var modelStub = function(){
+  var modelStubSync = function(){
     var _modelData = {};
     return {
       save: function(key, values){
         _modelData[key] = values;
+        return key;
       },
       get:  function(key){
         return _modelData[key];
@@ -209,6 +215,7 @@ describe('auth', function(){
           var spy = false;
           var statusChecked = q.defer();
           var statusPromise = statusChecked.promise;
+          var statusResult = false;
 
           var vConfig = {
             validator: function(email, cb) {
@@ -219,14 +226,14 @@ describe('auth', function(){
           };
 
           req1.listener.reqValidated = function(err, status) {
-            statusChecked.resolve(true);
-            expect(err).to.be.eql({error: 'failed validation'});
-            expect(status).to.eql(undefined);
+            statusChecked.resolve([err, status]);
           };
 
           expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
           statusPromise.then(function(result){
-            expect(result).to.equal(true);
+            statusResult = true;
+            //expect(false).to.equal(true);
+            //expect(result[1]).to.equal(validEmail);
             done();
           });
         });
@@ -242,82 +249,94 @@ describe('auth', function(){
             validator: function(email, cb) {
               spy=true;
               expect(email).to.eql(inValidEmail);
-              cb(null, email);
+              cb({error: 'Email rejected'});
             }
           };
 
           req1.listener.reqValidated = function(err, status) {
-            statusChecked.resolve(true);
-            expect(err).to.be.eql({error: 'failed validation'});
-            expect(status).to.eql(undefined);
+            statusChecked.resolve([err, status]);
+            done();
           };
 
           expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
-          statusPromise.then(function(result){
-            expect(result).to.equal(true);
-            done();
-          });
+
+          //a bit of a hack to get the assertions to be called
+          return q.all([
+            expect(statusPromise).to.eventually.be.an('Array'),
+            expect(statusPromise.get(0)).to.eventually.eql({ error: 'Email rejected' }),
+            expect(statusPromise.get(1)).to.eventually.be.undefined
+          ]);
         });
       });
     });
 
     describe('model', function() {
+      describe('sync', function(){
+        describe('saving', function(){
+          var validEmail;
+          var mConfig;
+          var authResp;
 
-      describe('saving', function(){
-        var validEmail;
-        var mConfig;
-        var authResp;
+          beforeEach(function(){
+            validEmail = 'email_to_persist'
+            mConfig = {
+              validator: function(email) {
+                return email
+              },
+              model: modelStubSync
+            };
 
-        beforeEach(function(){
-          validEmail = 'email_to_persist'
-          mConfig = {
-            validator: function(email) {
-              return email
-            },
-            model: modelStub
-          };
+            //create the request
+            authResp = auth(mConfig).request(validEmail, req1)
+          });
 
-          //create the request
-          authResp = auth(mConfig).request(validEmail, req1)
-        });
+          it('does not error when requesting', function(){
+            expect( authResp ).to.not.be.instanceof(Error);
+          });
 
-        it('does not error when requesting', function(){
-          expect( authResp ).to.not.be.instanceof(Error);
-        });
+          it('saves email to the model', function(){
+            var record = mConfig.model.get(validEmail);
+            expect( record.email ).to.eql(validEmail);
+          });
 
-        it('saves email to the model', function(){
-          var record = mConfig.model.get(validEmail);
-          expect( record.email ).to.eql(validEmail);
-        });
+          it('saves challenge/response to the model', function(){
+            var record = mConfig.model.get(validEmail);
+            expect( record.challenge ).to.eql(req1.challenge);
+            expect( record.response ).to.eql(req1.response);
+          });
 
-        it('saves challenge/response to the model', function(){
-          var record = mConfig.model.get(validEmail);
-          expect( record.challenge ).to.eql(req1.challenge);
-          expect( record.response ).to.eql(req1.response);
-        });
+          it('saves a randomStr to the model', function(){
+            var record = mConfig.model.get(validEmail);
+            expect( typeof record.randomStr ).to.equal('string');
+            expect( record.randomStr.length).to.equal(64);
+          });
 
-        it('saves a randomStr to the model', function(){
-          var record = mConfig.model.get(validEmail);
-          expect( typeof record.randomStr ).to.equal('string');
-          expect( record.randomStr.length).to.equal(64);
-        });
+          it('saves a staleVerification to the model', function(){
+            var record = mConfig.model.get(validEmail);
+            expect( record.staleVerification).to.be.within(0, Infinity);
+          });
 
-        it('saves a staleVerification to the model', function(){
-          var record = mConfig.model.get(validEmail);
-          expect( record.staleVerification).to.be.within(0, Infinity);
-        });
+          it('returns email to reqSaved callback when record saved', function(){
+            var email = 'saved_email';
+            var spy = false;
+            var statusChecked = q.defer();
+            var statusPromise = statusChecked.promise;
 
-        xit('returns email to reqSaved callback when record saved', function(){
-          var email = 'saved_email';
-          var callbackSpy = false;
+            req1.listener.reqSaved = function(err, status) {
+              console.log('reqSaved called', err, status);
+              statusChecked.resolve([err, status]);
+              done();
+            };
 
-          req1.listener.reqSaved = function(err, status) {
-            callbackSpy = true;
-            expect(status).to.eql(email);
-          };
+            console.log(req1.listener.reqSaved.toString());
+            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
 
-          expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error)
-          expect( callbackSpy).to.equal(true);
+            return q.all([
+              expect(statusPromise).to.eventually.be.an('Array'),
+              expect(statusPromise.get(0)).to.eventually.eql(null),
+              expect(statusPromise.get(1)).to.eventually.eql(email)
+            ]);
+          });
         });
       });
     });
