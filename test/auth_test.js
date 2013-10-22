@@ -93,28 +93,32 @@ describe('auth', function(){
 
       it('returns email to  callback if request is valid', function(){
         var email = 'my_email';
+        var callbackSpy = false;
 
         req1.listener.reqReceived = function(err, status) {
+          callbackSpy = true;
           expect(status).to.eql(email);
         };
 
         expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error)
+        expect( callbackSpy).to.equal(true);
       });
 
       it('returns error to callback if email is not a string', function(){
         var email = 32;
         var errorMessage = 'Invalid email, not a string';
+        var callbackSpy = false;
 
         req1.listener.reqReceived = function(err, status) {
+          callbackSpy = true;
           expect(err).to.eql({error: errorMessage});
         };
 
         expect( auth(config).request(email, req1) ).to.be.instanceof(Error)
           .and.have.property('message', 'Invalid email, not a string');
+        expect( callbackSpy).to.equal(true);
 
       });
-
-
     });
 
     describe('reqValidated', function() {
@@ -180,18 +184,9 @@ describe('auth', function(){
           expect(status).to.eql(undefined);
         };
 
-
         expect( auth(vConfig).request(inValidEmail, req1) ).to.be.instanceof(Error)
         expect(statusChecked).to.equal(true);
       });
-    });
-
-    describe('processing', function() {
-      it('consumes request');
-    });
-
-    describe('callback', function() {
-      it('provides callback (Change to emitter?????)');
     });
 
     describe('model', function() {
@@ -237,10 +232,37 @@ describe('auth', function(){
 
         it('saves a staleVerification to the model', function(){
           var record = mConfig.model.get(validEmail);
-          console.dir(record);
           expect( record.staleVerification).to.be.within(0, Infinity);
         });
 
+        it('returns email to  reqSaved callback when record saved', function(){
+          var email = 'saved_email';
+          var callbackSpy = false;
+
+          req1.listener.reqSaved = function(err, status) {
+            callbackSpy = true;
+            expect(status).to.eql(email);
+          };
+
+          expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error)
+          expect( callbackSpy).to.equal(true);
+        });
+
+//        it('returns error to callback if email is not a string', function(){
+//          var email = 32;
+//          var errorMessage = 'Invalid email, not a string';
+//          var callbackSpy = false;
+//
+//          req1.listener.reqReceived = function(err, status) {
+//            callbackSpy = true;
+//            expect(err).to.eql({error: errorMessage});
+//          };
+//
+//          expect( auth(config).request(email, req1) ).to.be.instanceof(Error)
+//            .and.have.property('message', 'Invalid email, not a string');
+//          expect( callbackSpy).to.equal(true);
+//
+//        });
       });
     });
 
