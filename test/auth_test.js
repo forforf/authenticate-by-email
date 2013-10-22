@@ -91,7 +91,6 @@ describe('auth', function(){
     });
 
 
-
     describe('reqReceived', function(){
 
       it('returns email to  callback if request is valid', function(){
@@ -142,9 +141,7 @@ describe('auth', function(){
 
           expect( auth(vConfig).request(avalidEmail, req1)).to.not.be.instanceof(Error);
           expect( aspy).to.be.equal(true);
-
         });
-
       });
 
       describe('sync', function(){
@@ -164,7 +161,6 @@ describe('auth', function(){
 
           req1.listener.reqValidated = function(err, status) {
             statusChecked.resolve(true);
-            console.log('listener.reqValidated runnnig');
             expect(err).to.be.equal(null);
             expect(status).to.eql(validEmail);
           };
@@ -176,9 +172,6 @@ describe('auth', function(){
             expect(result).to.equal(true);
             done();
           });
-
-          //.expect(statusChecked).to.equal(true);
-
         });
 
 
@@ -326,28 +319,8 @@ describe('auth', function(){
           expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error)
           expect( callbackSpy).to.equal(true);
         });
-
-//        it('returns error to callback if email is not a string', function(){
-//          var email = 32;
-//          var errorMessage = 'Invalid email, not a string';
-//          var callbackSpy = false;
-//
-//          req1.listener.reqReceived = function(err, status) {
-//            callbackSpy = true;
-//            expect(err).to.eql({error: errorMessage});
-//          };
-//
-//          expect( auth(config).request(email, req1) ).to.be.instanceof(Error)
-//            .and.have.property('message', 'Invalid email, not a string');
-//          expect( callbackSpy).to.equal(true);
-//
-//        });
       });
     });
-
-//    var res1 = a1.config.validator('dummy');
-//    var res2 = a2.config.validator('dummy');
-//    expect(res1).to.not.eql(res2);
   });
 });
 
