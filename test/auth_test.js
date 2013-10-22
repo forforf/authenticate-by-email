@@ -1,3 +1,6 @@
+var q = require('q');
+
+
 function libPath(libFilePath){
   var pathToLib = '../lib/'
   return(pathToLib + libFilePath);
@@ -123,69 +126,145 @@ describe('auth', function(){
 
     describe('reqValidated', function() {
 
-      it('calls the validator in the config options', function(){
-        var validEmail = 'my_email';
-        var spy=false;
+      describe('call validator', function(){
 
-        var vConfig = {
-          validator: function(email) {
-            spy=true;
-            expect(email).to.eql(validEmail);
-            return email
-          }
-        };
+        it('calls the validator in the config options', function(){
+          var avalidEmail = 'my_email';
+          var aspy=false;
 
-        expect( auth(vConfig).request(validEmail, req1)).to.not.be.instanceof(Error);
-        expect( spy).to.be.equal(true);
+          var vConfig = {
+            validator: function(email) {
+              aspy=true;
+              expect(email).to.eql(avalidEmail);
+              return email
+            }
+          };
+
+          expect( auth(vConfig).request(avalidEmail, req1)).to.not.be.instanceof(Error);
+          expect( aspy).to.be.equal(true);
+
+        });
 
       });
 
-      it('returns email to  callback if request is valid', function(){
-        var validEmail = 'my_valid_email';
-        var spy = false;
-        var statusChecked = false;
+      describe('sync', function(){
+        it('returns email to  callback if request is valid', function(done){
+          var validEmail = 'my_valid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
 
-        var vConfig = {
-          validator: function(email) {
-            spy=true;
-            expect(email).to.eql(validEmail);
-            return email
-          }
-        };
+          var vConfig = {
+            validator: function(email) {
+              spy=true;
+              expect(email).to.eql(validEmail);
+              return email
+            }
+          };
 
-        req1.listener.reqValidated = function(err, status) {
-          statusChecked = true;
-          expect(err).to.be.equal(null);
-          expect(status).to.eql(validEmail);
-        };
+          req1.listener.reqValidated = function(err, status) {
+            statusChecked.resolve(true);
+            console.log('listener.reqValidated runnnig');
+            expect(err).to.be.equal(null);
+            expect(status).to.eql(validEmail);
+          };
 
 
-        expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( spy).to.equal(true);
+          statusPromise.then(function(result){
+            expect(result).to.equal(true);
+            done();
+          });
 
-        expect(statusChecked).to.equal(true);
+          //.expect(statusChecked).to.equal(true);
+
+        });
+
+
+        it('returns error to  listener if email does not validate', function(done){
+          var inValidEmail = 'my_invalid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
+
+          var vConfig = {
+            validator: function(email) {
+              spy=true;
+              expect(email).to.eql(inValidEmail);
+              return null
+            }
+          };
+
+          req1.listener.reqValidated = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.eql({error: 'failed validation'});
+            expect(status).to.eql(undefined);
+          };
+
+          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          statusPromise.then(function(result){
+            expect(result).to.equal(true);
+            done();
+          });
+        });
       });
 
-      it('returns error to  listener if email does not validate', function(){
-        var inValidEmail = 'my_invalid_email';
-        var spy = false;
-        var statusChecked = false;
+      describe('async', function(){
+        it('returns email to  callback if request is valid', function(){
+          var validEmail = 'my_valid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
 
-        var vConfig = {
-          validator: function(email) {
-            spy=true;
-            expect(email).to.eql(inValidEmail);
-            return undefined
-          }
-        };
+          var vConfig = {
+            validator: function(email, cb) {
+              spy=true;
+              expect(email).to.eql(validEmail);
+              cb(null, email);
+            }
+          };
 
-        req1.listener.reqValidated = function(err, status) {
-          statusChecked = true;
-          expect(err).to.be.eql({error: 'failed validation'});
-          expect(status).to.eql(undefined);
-        };
+          req1.listener.reqValidated = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.eql({error: 'failed validation'});
+            expect(status).to.eql(undefined);
+          };
 
-        expect( auth(vConfig).request(inValidEmail, req1) ).to.be.instanceof(Error)
-        expect(statusChecked).to.equal(true);
+          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          statusPromise.then(function(result){
+            expect(result).to.equal(true);
+            done();
+          });
+        });
+
+
+        it('returns error to  listener if email does not validate', function(){
+          var inValidEmail = 'my_invalid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
+
+          var vConfig = {
+            validator: function(email, cb) {
+              spy=true;
+              expect(email).to.eql(inValidEmail);
+              cb(null, email);
+            }
+          };
+
+          req1.listener.reqValidated = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.eql({error: 'failed validation'});
+            expect(status).to.eql(undefined);
+          };
+
+          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          statusPromise.then(function(result){
+            expect(result).to.equal(true);
+            done();
+          });
+        });
       });
     });
 
@@ -235,7 +314,7 @@ describe('auth', function(){
           expect( record.staleVerification).to.be.within(0, Infinity);
         });
 
-        it('returns email to  reqSaved callback when record saved', function(){
+        xit('returns email to reqSaved callback when record saved', function(){
           var email = 'saved_email';
           var callbackSpy = false;
 
