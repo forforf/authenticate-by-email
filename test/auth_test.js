@@ -447,7 +447,7 @@ describe('auth', function(){
     describe('reqSent', function() {
       describe('sync (not recommended)', function(){
 
-        it('returns email to listener if request is valid', function(done){
+        it('returns email to listener if data was sent', function(done){
           var validEmail = 'my_valid_email';
           var spy = false;
           var statusChecked = q.defer();
@@ -483,7 +483,7 @@ describe('auth', function(){
         });
 
 
-        it('returns error to  listener if sender errors', function(done){
+        it('returns error to  listener if sending data resulted in errors', function(done){
           var inValidEmail = 'my_error_email';
           var statusChecked = q.defer();
           var statusPromise = statusChecked.promise;
@@ -520,77 +520,80 @@ describe('auth', function(){
         });
       });
 
-      //convert to async model for testing
-      xdescribe('async', function(){
-        describe('saving', function(){
-          var validEmail;
-          var mConfig;
-          var authResp;
+      describe('async', function(){
 
-          beforeEach(function(){
-            validEmail = 'email_to_persist'
-            mConfig = {
-              validator: function(email) {
-                return email
-              },
-              model: modelStubAsync
-            };
+        it('returns email to listener if request is valid', function(done){
+          var validEmail = 'my_valid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
 
-            //create the request
-            auth(mConfig).request(validEmail, req1);
+          //todo test mixed sync and async, it should be ok
+          var sendConfig = {
+            model: modelStubAsync,
+            validator: function(email, cb) {
+              cb(null, email);
+            },
+            sender: function(email, randomStr, challenge, cb) {
+              spy=true;
+              console.log('AA');
+              //todo: remove any expects in config fn in previous specs - failure isn't caught by test framework
+              //todo: we still need to test for the values though!!
+              //expect(email).to.eql('foo');
+              //expect(randomStr).to.eql(sendConfig.model.get(email).randomStr);
+              //expect(challenge).to.eql(opts1.challenge);
+              cb(null, email);
+            }
+          };
+
+          req1.listener.reqSent = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.equal(null);
+            expect(status).to.eql(validEmail);
+          };
+
+          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+
+          statusPromise.then(function(result){
+            expect( spy).to.equal(true);
+            expect(result).to.equal(true);
+            done();
           });
+        });
 
-          it('does not error when requesting', function(){
-            expect( authResp ).to.not.be.instanceof(Error);
-          });
+        it('returns error to  listener if sender errors', function(done){
+          var inValidEmail = 'my_error_email';
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
 
-          it('saves email to the model', function(){
-            mConfig.model.get(validEmail, function(err, record){
-              expect(err).to.equal(null);
-              expect(record.email).to.equal(validEmail);
-            });
-          });
+          var sendConfig = {
+            model: modelStubSync,
+            validator: function(email) {
+              return email
+            },
+            sender: function(email, randomStr, challenge) {
 
-          it('saves challenge/response to the model', function(){
-            mConfig.model.get(validEmail, function(err, record){
-              expect( record.challenge ).to.eql(req1.challenge);
-              expect( record.response ).to.eql(req1.response);
-            });
-          });
+              throw new Error('sender failed');
+              console.log('A');
+              return email
+            }
+          };
 
-          it('saves a randomStr to the model', function(){
-            mConfig.model.get(validEmail, function(err, record){
-              expect( typeof record.randomStr ).to.equal('string');
-              expect( record.randomStr.length).to.equal(64);
-            });
-          });
+          req1.listener.reqSent = function(err, status) {
+            //todo: update the other tests to run like this
+            statusChecked.resolve([err, status]);
+          };
 
-          it('saves a staleVerification to the model', function(){
-            mConfig.model.get(validEmail, function(err, record){
-              expect( record.staleVerification).to.be.within(0, Infinity);
-            });
-          });
 
-          it('returns email to reqSaved callback when record saved', function(){
-            var email = 'saved_email';
-            var spy = false;
-            var statusChecked = q.defer();
-            var statusPromise = statusChecked.promise;
+          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
 
-            req1.listener.reqSaved = function(err, status) {
-              console.log('reqSaved called', err, status);
-              statusChecked.resolve([err, status]);
-              done();
-            };
-
-            console.log(req1.listener.reqSaved.toString());
-            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
-
-            return q.all([
-              expect(statusPromise).to.eventually.be.an('Array'),
-              expect(statusPromise.get(0)).to.eventually.eql(null),
-              expect(statusPromise.get(1)).to.eventually.eql(email)
-            ]);
+          statusPromise.then(function(result){
+            //result holds callback status (err, status)
+            var err = result[0];
+            var status = result[1]
+            expect(err).to.not.be.undefined;
+            expect(err).to.not.equal(null);
+            done();
           });
         });
       });
