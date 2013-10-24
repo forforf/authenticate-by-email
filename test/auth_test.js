@@ -52,6 +52,14 @@ describe('auth', function(){
     };
   }();
 
+  var sendDataSync = function(email, randomStr, challenge){
+    return email;
+  };
+
+  var sendDataAsync = function(email, randomStr, challenge, cb){
+    cb(null, email);
+  };
+
   beforeEach(function(){
     config = {
       validator: function(email) { return email }
@@ -61,7 +69,7 @@ describe('auth', function(){
     }
   });
 
-  it('sanity check', function(){
+    it('sanity check', function(){
     expect(auth).to.exist;
   });
 
@@ -167,7 +175,7 @@ describe('auth', function(){
       });
 
       describe('sync', function(){
-        it('returns email to  callback if request is valid', function(done){
+        it('returns email to listener if request is valid', function(done){
           var validEmail = 'my_valid_email';
           var spy = false;
           var statusChecked = q.defer();
@@ -178,6 +186,7 @@ describe('auth', function(){
               spy=true;
               expect(email).to.eql(validEmail);
               return email
+
             }
           };
 
@@ -299,7 +308,10 @@ describe('auth', function(){
               validator: function(email) {
                 return email
               },
-              model: modelStubSync
+              model: modelStubSync,
+              sender: function(email, randomStr, challenge){
+                return email;
+              }
             };
 
             //create the request
@@ -339,12 +351,10 @@ describe('auth', function(){
             var statusPromise = statusChecked.promise;
 
             req1.listener.reqSaved = function(err, status) {
-              console.log('reqSaved called', err, status);
               statusChecked.resolve([err, status]);
               done();
             };
 
-            console.log(req1.listener.reqSaved.toString());
             expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
 
             return q.all([
@@ -358,6 +368,150 @@ describe('auth', function(){
 
       //convert to async model for testing
       describe('async', function(){
+        describe('saving', function(){
+          var validEmail;
+          var mConfig;
+          var authResp;
+
+          beforeEach(function(){
+            validEmail = 'email_to_persist'
+            mConfig = {
+              validator: function(email) {
+                return email
+              },
+              model: modelStubAsync,
+              sender: function(email, randomStr, challenge, cb){
+                cb(null, email);
+              }
+            };
+
+            //create the request
+            auth(mConfig).request(validEmail, req1);
+          });
+
+          it('does not error when requesting', function(){
+            expect( authResp ).to.not.be.instanceof(Error);
+          });
+
+          it('saves email to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect(err).to.equal(null);
+              expect(record.email).to.equal(validEmail);
+            });
+          });
+
+          it('saves challenge/response to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( record.challenge ).to.eql(req1.challenge);
+              expect( record.response ).to.eql(req1.response);
+            });
+          });
+
+          it('saves a randomStr to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( typeof record.randomStr ).to.equal('string');
+              expect( record.randomStr.length).to.equal(64);
+            });
+          });
+
+          it('saves a staleVerification to the model', function(){
+            mConfig.model.get(validEmail, function(err, record){
+              expect( record.staleVerification).to.be.within(0, Infinity);
+            });
+          });
+
+          it('returns email to reqSaved callback when record saved', function(){
+            var email = 'saved_email';
+            var spy = false;
+            var statusChecked = q.defer();
+            var statusPromise = statusChecked.promise;
+
+            req1.listener.reqSaved = function(err, status) {
+              statusChecked.resolve([err, status]);
+              done();
+            };
+
+            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
+
+            return q.all([
+              expect(statusPromise).to.eventually.be.an('Array'),
+              expect(statusPromise.get(0)).to.eventually.eql(null),
+              expect(statusPromise.get(1)).to.eventually.eql(email)
+            ]);
+          });
+        });
+      });
+
+    });
+
+    xdescribe('reqSent', function() {
+      describe('sync (not recommended)', function(){
+        it('returns email to listener if request is valid', function(done){
+          var validEmail = 'my_valid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
+
+          var sendConfig = {
+            model: modelStubSync,
+            validator: function(email) {
+              return email
+            },
+            sender: function(email, randomStr, challenge) {
+              spy=true;
+              expect(email).to.eql(validEmail);
+              expect(randomStr).to.eql(sendConfig.model.get(email).randomStr);
+              expect(challenge).to.eql(opts1.challenge);
+              return email
+            }
+          };
+
+          req1.listener.reqSent = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.equal(null);
+            expect(status).to.eql(validEmail);
+          };
+
+          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+
+          statusPromise.then(function(result){
+            expect( spy).to.equal(true);
+            expect(result).to.equal(true);
+            done();
+          });
+        });
+
+
+        xit('returns error to  listener if email does not validate', function(done){
+          var inValidEmail = 'my_invalid_email';
+          var spy = false;
+          var statusChecked = q.defer();
+          var statusPromise = statusChecked.promise;
+
+          var vConfig = {
+            validator: function(email) {
+              spy=true;
+              expect(email).to.eql(inValidEmail);
+              return null
+            }
+          };
+
+          req1.listener.reqValidated = function(err, status) {
+            statusChecked.resolve(true);
+            expect(err).to.be.eql({error: 'failed validation'});
+            expect(status).to.eql(undefined);
+          };
+
+          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          statusPromise.then(function(result){
+            expect(result).to.equal(true);
+            done();
+          });
+        });
+      });
+
+      //convert to async model for testing
+      xdescribe('async', function(){
         describe('saving', function(){
           var validEmail;
           var mConfig;
