@@ -444,8 +444,9 @@ describe('auth', function(){
 
     });
 
-    xdescribe('reqSent', function() {
+    describe('reqSent', function() {
       describe('sync (not recommended)', function(){
+
         it('returns email to listener if request is valid', function(done){
           var validEmail = 'my_valid_email';
           var spy = false;
@@ -482,29 +483,38 @@ describe('auth', function(){
         });
 
 
-        xit('returns error to  listener if email does not validate', function(done){
-          var inValidEmail = 'my_invalid_email';
-          var spy = false;
+        it('returns error to  listener if sender errors', function(done){
+          var inValidEmail = 'my_error_email';
           var statusChecked = q.defer();
           var statusPromise = statusChecked.promise;
 
-          var vConfig = {
+          var sendConfig = {
+            model: modelStubSync,
             validator: function(email) {
-              spy=true;
-              expect(email).to.eql(inValidEmail);
-              return null
+              return email
+            },
+            sender: function(email, randomStr, challenge) {
+
+              throw new Error('sender failed');
+              console.log('A');
+              return email
             }
           };
 
-          req1.listener.reqValidated = function(err, status) {
-            statusChecked.resolve(true);
-            expect(err).to.be.eql({error: 'failed validation'});
-            expect(status).to.eql(undefined);
+          req1.listener.reqSent = function(err, status) {
+            //todo: update the other tests to run like this
+            statusChecked.resolve([err, status]);
           };
 
-          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+
+          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+
           statusPromise.then(function(result){
-            expect(result).to.equal(true);
+            //result holds callback status (err, status)
+            var err = result[0];
+            var status = result[1]
+            expect(err).to.not.be.undefined;
+            expect(err).to.not.equal(null);
             done();
           });
         });
