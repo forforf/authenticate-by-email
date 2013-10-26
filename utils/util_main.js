@@ -3,7 +3,7 @@
 // here rather than requiring the whole underscore package
 
 //adds utility methods to forforf namespace
-var util1 = require('./forforf-extend-clone.js').forforf
+var util1 = require('./forforf-extend-clone.js').forforf;
 var util2 = require('./forforf-isString.js').forforf;
 var util3 = require('./forforf-randomUrlToken.js').forforf;
 

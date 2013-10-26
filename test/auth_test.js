@@ -1,3 +1,5 @@
+'use strict';
+
 var q = require('q');
 require('mocha-as-promised')();
 
@@ -7,7 +9,7 @@ chai.use(chaiAsPromised);
 
 
 function libPath(libFilePath){
-  var pathToLib = '../lib/'
+  var pathToLib = '../lib/';
   return(pathToLib + libFilePath);
 }
 
@@ -15,12 +17,11 @@ var auth = require(libPath('auth.js'));
 
 var expect = require('chai').expect;
 
-
 describe('auth', function(){
   var config;
   var configValidationFail;
 
-  var modelStubSync = function(){
+  var modelStubSync = ( function(){
     var _modelData = {};
     return {
       save: function(key, values){
@@ -34,9 +35,9 @@ describe('auth', function(){
         return _modelData;
       }
     };
-  }();
+  }() );
 
-  var modelStubAsync = function(){
+  var modelStubAsync = ( function(){
     var _modelData = {};
     return {
       save: function(key, values, cb){
@@ -50,23 +51,15 @@ describe('auth', function(){
         cb(null, _modelData);
       }
     };
-  }();
-
-  var sendDataSync = function(email, randomStr, challenge){
-    return email;
-  };
-
-  var sendDataAsync = function(email, randomStr, challenge, cb){
-    cb(null, email);
-  };
+  }() );
 
   beforeEach(function(){
     config = {
-      validator: function(email) { return email }
+      validator: function(email) { return email; }
     };
     configValidationFail = {
-      validator: function(email) { return null }
-    }
+      validator: function() { return null; }
+    };
   });
 
     it('sanity check', function(){
@@ -94,11 +87,11 @@ describe('auth', function(){
     var req1, opts1;
 
     beforeEach(function(){
-      var email1 = "email1";
+      var email1 = 'email1';
 
       opts1 = {
-        challenge: "who goes there?",
-        response: "tis me.",
+        challenge: 'who goes there?',
+        response: 'tis me.',
         listener: {}
       };
 
@@ -107,7 +100,7 @@ describe('auth', function(){
         challenge: opts1.challenge,
         response: opts1.response,
         listener: opts1.listener
-      }
+      };
     });
 
     it('is a function', function(){
@@ -132,7 +125,7 @@ describe('auth', function(){
           expect(status).to.eql(email);
         };
 
-        expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error)
+        expect( auth(config).request(email, req1) ).to.not.be.instanceof(Error);
         expect( callbackSpy).to.equal(true);
       });
 
@@ -144,6 +137,7 @@ describe('auth', function(){
         req1.listener.reqReceived = function(err, status) {
           callbackSpy = true;
           expect(err).to.eql({error: errorMessage});
+          expect(status).to.not.be.a('function');
         };
 
         expect( auth(config).request(email, req1) ).to.be.instanceof(Error)
@@ -165,7 +159,7 @@ describe('auth', function(){
             validator: function(email) {
               aspy=true;
               expect(email).to.eql(avalidEmail);
-              return email
+              return email;
             }
           };
 
@@ -185,7 +179,7 @@ describe('auth', function(){
             validator: function(email) {
               spy=true;
               expect(email).to.eql(validEmail);
-              return email
+              return email;
 
             }
           };
@@ -197,7 +191,7 @@ describe('auth', function(){
           };
 
 
-          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error);
           expect( spy).to.equal(true);
           statusPromise.then(function(result){
             expect(result).to.equal(true);
@@ -216,7 +210,7 @@ describe('auth', function(){
             validator: function(email) {
               spy=true;
               expect(email).to.eql(inValidEmail);
-              return null
+              return null;
             }
           };
 
@@ -226,7 +220,7 @@ describe('auth', function(){
             expect(status).to.eql(undefined);
           };
 
-          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error);
           statusPromise.then(function(result){
             expect(result).to.equal(true);
             done();
@@ -254,12 +248,11 @@ describe('auth', function(){
             statusChecked.resolve([err, status]);
           };
 
-          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(vConfig).request(validEmail, req1) ).to.not.be.instanceof(Error);
           statusPromise.then(function(result){
-            statusResult = true;
-            //expect(false).to.equal(true);
-            //expect(result[1]).to.equal(validEmail);
-            done();
+            if (result){
+              statusResult = true;
+            }
           });
         });
 
@@ -280,10 +273,9 @@ describe('auth', function(){
 
           req1.listener.reqValidated = function(err, status) {
             statusChecked.resolve([err, status]);
-            done();
           };
 
-          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(vConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error);
 
           //a bit of a hack to get the assertions to be called
           return q.all([
@@ -303,19 +295,21 @@ describe('auth', function(){
           var authResp;
 
           beforeEach(function(){
-            validEmail = 'email_to_persist'
+            validEmail = 'email_to_persist';
             mConfig = {
               validator: function(email) {
-                return email
+                return email;
               },
               model: modelStubSync,
+
+              /*jshint unused:false*/
               sender: function(email, randomStr, challenge){
                 return email;
               }
             };
 
             //create the request
-            authResp = auth(mConfig).request(validEmail, req1)
+            authResp = auth(mConfig).request(validEmail, req1);
           });
 
           it('does not error when requesting', function(){
@@ -346,16 +340,14 @@ describe('auth', function(){
 
           it('returns email to reqSaved callback when record saved', function(){
             var email = 'saved_email';
-            var spy = false;
             var statusChecked = q.defer();
             var statusPromise = statusChecked.promise;
 
             req1.listener.reqSaved = function(err, status) {
               statusChecked.resolve([err, status]);
-              done();
             };
 
-            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
+            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error);
 
             return q.all([
               expect(statusPromise).to.eventually.be.an('Array'),
@@ -374,10 +366,10 @@ describe('auth', function(){
           var authResp;
 
           beforeEach(function(){
-            validEmail = 'email_to_persist'
+            validEmail = 'email_to_persist';
             mConfig = {
               validator: function(email) {
-                return email
+                return email;
               },
               model: modelStubAsync,
               sender: function(email, randomStr, challenge, cb){
@@ -422,16 +414,14 @@ describe('auth', function(){
 
           it('returns email to reqSaved callback when record saved', function(){
             var email = 'saved_email';
-            var spy = false;
             var statusChecked = q.defer();
             var statusPromise = statusChecked.promise;
 
             req1.listener.reqSaved = function(err, status) {
               statusChecked.resolve([err, status]);
-              done();
             };
 
-            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error)
+            expect( auth(mConfig).request(email, req1) ).to.not.be.instanceof(Error);
 
             return q.all([
               expect(statusPromise).to.eventually.be.an('Array'),
@@ -456,14 +446,14 @@ describe('auth', function(){
           var sendConfig = {
             model: modelStubSync,
             validator: function(email) {
-              return email
+              return email;
             },
             sender: function(email, randomStr, challenge) {
               spy=true;
               expect(email).to.eql(validEmail);
               expect(randomStr).to.eql(sendConfig.model.get(email).randomStr);
               expect(challenge).to.eql(opts1.challenge);
-              return email
+              return email;
             }
           };
 
@@ -473,7 +463,7 @@ describe('auth', function(){
             expect(status).to.eql(validEmail);
           };
 
-          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error);
 
           statusPromise.then(function(result){
             expect( spy).to.equal(true);
@@ -491,13 +481,13 @@ describe('auth', function(){
           var sendConfig = {
             model: modelStubSync,
             validator: function(email) {
-              return email
+              return email;
             },
-            sender: function(email, randomStr, challenge) {
 
+            /*jshint unused:false*/
+            sender: function(email, randomStr, challenge) {
               throw new Error('sender failed');
-              console.log('A');
-              return email
+              //return email;
             }
           };
 
@@ -507,12 +497,12 @@ describe('auth', function(){
           };
 
 
-          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error);
 
           statusPromise.then(function(result){
             //result holds callback status (err, status)
             var err = result[0];
-            var status = result[1]
+            var status = result[1];
             expect(err).to.not.be.undefined;
             expect(err).to.not.equal(null);
             done();
@@ -528,7 +518,6 @@ describe('auth', function(){
           var statusChecked = q.defer();
           var statusPromise = statusChecked.promise;
 
-          //todo test mixed sync and async, it should be ok
           var sendConfig = {
             model: modelStubAsync,
             validator: function(email, cb) {
@@ -536,12 +525,7 @@ describe('auth', function(){
             },
             sender: function(email, randomStr, challenge, cb) {
               spy=true;
-              console.log('AA');
-              //todo: remove any expects in config fn in previous specs - failure isn't caught by test framework
               //todo: we still need to test for the values though!!
-              //expect(email).to.eql('foo');
-              //expect(randomStr).to.eql(sendConfig.model.get(email).randomStr);
-              //expect(challenge).to.eql(opts1.challenge);
               cb(null, email);
             }
           };
@@ -552,7 +536,7 @@ describe('auth', function(){
             expect(status).to.eql(validEmail);
           };
 
-          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(sendConfig).request(validEmail, req1) ).to.not.be.instanceof(Error);
 
           statusPromise.then(function(result){
             expect( spy).to.equal(true);
@@ -569,13 +553,14 @@ describe('auth', function(){
           var sendConfig = {
             model: modelStubSync,
             validator: function(email) {
-              return email
+              return email;
             },
+
+            /*jshint unused:false*/
             sender: function(email, randomStr, challenge) {
 
               throw new Error('sender failed');
-              console.log('A');
-              return email
+              //return email;
             }
           };
 
@@ -585,12 +570,12 @@ describe('auth', function(){
           };
 
 
-          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error)
+          expect( auth(sendConfig).request(inValidEmail, req1) ).to.not.be.instanceof(Error);
 
           statusPromise.then(function(result){
             //result holds callback status (err, status)
             var err = result[0];
-            var status = result[1]
+            var status = result[1];
             expect(err).to.not.be.undefined;
             expect(err).to.not.equal(null);
             done();
