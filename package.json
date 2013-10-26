@@ -4,6 +4,9 @@
   "description":"A drop in component for generating security credentials",
   "version":"0.0.1",
   "main":"./lib/auth.js",
+  "scripts": {
+    "test":"mocha --reporter spec --check-leaks"
+  },
   "repository": {
     "type": "git",
     "url": "https://gighub.com/forforf/authenticate-by-email"
