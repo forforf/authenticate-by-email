@@ -1,12 +1,13 @@
+'use strict';
 
 var extend = require('extend');
 
 var clone = function(obj) {
-  if (obj !== Object(obj)) return obj;
+  if (obj !== Object(obj)) { return obj; }
   return Array.isArray(obj) ? obj.slice() : extend({}, obj);
 };
 
-var forforf = {}
+var forforf = {};
 forforf.extend = extend;
 forforf.clone = clone;
 

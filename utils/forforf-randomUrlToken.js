@@ -1,4 +1,6 @@
-var crypto = require('crypto')
+'use strict';
+
+var crypto = require('crypto');
 
 
 var randomUrlToken = function(){
