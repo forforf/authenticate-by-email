@@ -5,7 +5,7 @@
   "version":"0.0.1",
   "main":"./lib/auth.js",
   "scripts": {
-    "test":"mocha --reporter spec --check-leaks"
+    "test":"mocha --reporter spec"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "chai": "*",
     "chai-as-promised": "*"
   },
-  "bundledDependencies": {},
+  "bundledDependencies": [],
   "license":"MIT",
   "engines": {
     "node": ">=0.8"
