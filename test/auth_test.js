@@ -584,6 +584,80 @@ describe('auth', function(){
       });
 
     });
+    describe('.verify', function(){
+      var verifyEmail;
+      var mConfig;
+      var verifyModelData;
+
+      beforeEach(function(){
+        verifyEmail = 'email_to_persist';
+        mConfig = {
+          validator: function(email) {
+            return email;
+          },
+          model: modelStubSync
+        };
+
+        verifyModelData = {
+          email: verifyEmail,
+          challenge: 'who goes there?',
+          response: 'tis me.',
+          randomStr: 'abc'
+        };
+
+        //initialize the model
+        mConfig.model.save(verifyEmail, verifyModelData);
+
+      });
+
+      it('is a function', function(){
+        expect(auth(config).verify).to.be.a('function');
+      });
+
+      it('has an initialized model', function(){
+         expect(mConfig.model.get(verifyEmail).response).to.eql('tis me.');
+      });
+
+      it('verifies correct data', function(done){
+        var aResponse = 'tis me.';
+        var aRandomStr = 'abc';
+        auth(mConfig).verify(verifyEmail, aRandomStr, aResponse, function(err, email){
+          expect(err).to.equal(null);
+          expect(email).to.equal(verifyEmail);
+          done();
+        });
+      });
+
+      it('rejects incorrect challenge response', function(done){
+        var aResponse = 'not me';
+        var aRandomStr = 'abc';
+        auth(mConfig).verify(verifyEmail, aRandomStr, aResponse, function(err, email){
+          expect(err).to.eql( {error: 'Not verified'} );
+          expect(email).to.be.undefined;
+          done();
+        });
+      });
+
+      it('rejects incorrect random string', function(done){
+        var aResponse = 'tis me.';
+        var aRandomStr = 'abcd';
+        auth(mConfig).verify(verifyEmail, aRandomStr, aResponse, function(err, email){
+          expect(err).to.eql( {error: 'Not verified'} );
+          expect(email).to.be.undefined;
+          done();
+        });
+      });
+
+      it('rejects incorrect email', function(done){
+        var aResponse = 'tis me.';
+        var aRandomStr = 'abc';
+        auth(mConfig).verify('foo_email', aRandomStr, aResponse, function(err, email){
+          expect(err).to.eql( {error: 'Not verified'} );
+          expect(email).to.be.undefined;
+          done();
+        });
+      });
+    });
   });
 });
 
